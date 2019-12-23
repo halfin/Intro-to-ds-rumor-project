@@ -4,3 +4,5 @@ Each time when someone updates our project, please descibe your work here as wel
 EXAPMLE: chenying 12.09 17p.m. create readme.md
 
 data can be downloaded from https://github.com/thunlp/Chinese_Rumor_Dataset
+
+When running final_project.ipynb, please ensure that the folder "original-microblog" is under the same folder as the ipynb file. 
