@@ -1,6 +1,6 @@
 \documentclass[12pt,a4paper]{article}
 \usepackage{ctex,graphicx,textcomp,amsmath,amsfonts,subfigure,multirow,ulem,listings}
-\usepackage{amssymb,indentfirst,bm,subfigure,hyperref,xcolor,pifont}
+\usepackage{amssymb,indentfirst,bm,subfigure,hyperref,xcolor,pifont,cite}
 \usepackage{geometry}
 \setlength{\topmargin}{-0.45in}
 \setlength{\evensidemargin}{0in}
@@ -32,7 +32,8 @@
 \newcommand{\rd}{\mathrm{d}}
 \newcommand{\dps}[1]{\displaystyle{#1}}
 \newcommand{\tabincell}[2]{\begin{tabular}{@{}#1@{}}#2\end{tabular}}
-\newcommand{\noindentpar}{\hangafter=1 \setlength{\hangindent}{2em}\noindent}
+\newcommand{\noindentpar}{\hangafter=1 \setlength{\hangindent}{1.5em}\noindent}
+\renewcommand{\refname}{References}
 
 \lstset{language=python,numbers=left, breaklines=true,
 	numberstyle=\footnotesize,keywordstyle=\color{blue!100}\fontspec{Consolas Bold},
@@ -45,7 +46,11 @@
 \newcommand{\ns}{\normalsize}
 \renewcommand{\contentsname}{Contents}
 \maketitle
-\vspace{20pt}
+\vspace{-15pt}
+\begin{center}
+	Our project has a repository: \url{https://github.com/halfin/Intro-to-ds-rumor-project}.
+\end{center}
+\vspace{-10pt}
 \rule[-10pt]{15cm}{0.05em}
 \vspace{-5pt}
 \tableofcontents
@@ -434,7 +439,16 @@ In fact, due to other research, \textbf{the distribution of Internet rumors in v
 \textbf{Domain information with different data distributions} is often treated as a whole, thus the classifier established in this way often over-sensitive. As a result, Internet rumors in some areas are not well identified. We need to build \textbf{separate classifiers for each domain to capture specific fields}, otherwise, high-frequency domain words will be misleading. 
 
 In the future work, on the one hand, we will deeply \textbf{investigate and analyze} the influence of the features mentioned above on the detection effect of rumor events, so as to select the best combination of features. On the other hand, we will consider \textbf{the principle of event propagation} and construct a \textbf{temporal feature representation model} that is more consistent with event evolution and propagation. At the same time, we will also consider using other model to solve the problems of complex \textbf{artificial feature construction and weak feature semantics}.
+\clearpage
+\section{References}
+\noindentpar[1] Qiao Li and Yu Liu. Research on twitter rumor standpoint analysis based on machine learning.
+\textsl{ISBN/ISSN:}\textit{ 1674-6236}, 2019.
 
+\noindentpar[2] Zhiyuan Liu, Le Zhang, Cunchao Tu, and Maosong Sun. Statistical and semantic analysis of rumors in
+chinese social media. \textit{Scientia Sinica Informationis}, 45(12):1536, 2015.
+
+\noindentpar[3] Changhe Song, Cunchao Tu, Cheng Yang, Zhiyuan Liu, and Maosong Sun. Ced: Credible early detection
+of social media rumors. \textit{arXiv:} \textit{1811.04175}, 2018.
 
 
 \end{document}
