@@ -255,7 +255,7 @@ $\blacksquare$ Then we get the whole features we want to extract. All the featur
 
 
 \section{Model Selection and Model Training}
-\subsection{Comparison between several models}
+\subsection{Comparison between Several Models}
 In this model, we want to select a model that can classify whether a document is a rumor or not.
 Because we cannot easily tell the answer, we need a model that is highly interpretable.  Here are some alternatives:
 
@@ -277,29 +277,163 @@ The model of deep learning is so complex that we can hardly interpret it, so we 
 Then we use cross-validation, split the dataset into training set (70\%) and testing set (30\%). Using the training-set to train the model and test it on the testing set, we can calculate the accuracy of the model. 
 Initially we do not adjust the parameters of the model. 
 
+Initially we do not adjust the parameters of the model. 
 
+\begin{lstlisting}
+from sklearn.neighbors import KNeighborsClassifier
+knn = KNeighborsClassifier(n_neighbors=50)
+# change the shape of Y_train to (n_samples, ) using `.ravel()`
+knn.fit(X_train, Y_train.ravel())
+knn_pred = knn.predict(X_test)
+print('The accuracy of the KNN is', metrics.accuracy_score(knn_pred, Y_test))
+## The accuracy of the KNN is 0.7131313131313132
+\end{lstlisting}
 
+KNN uses the k nearest neighbors around a certain data to predict the classification of the data. As we can see, it doesn’t perform satisfactorily.
 
+\begin{lstlisting}
+from sklearn.linear_model import LogisticRegression
+clf = LogisticRegression(penalty='l1',max_iter=800,fit_intercept=False,solver='saga',C=20)
+clf.fit(X_train, Y_train.ravel())
+clf_pred = clf.predict(X_test)
+print('The accuracy of the Logistic Regression is', metrics.accuracy_score(clf_pred, Y_test))
+## The accuracy of the Logistic Regression is 0.7686868686868686
+\end{lstlisting}
 
+Logistic Regression uses a linear model to fit the sample points, and then uses a loss function to classify the data. In the process of adjusting the parameters of the LR model, we find that decreasing regular terms and setting the penalty to L1 significantly increases model accuracy. \textbf{This means we are dealing with a under-fitting problem}. 
 
-Random Forest is the best model for this problem.
+\begin{lstlisting}
+from sklearn import tree
+dtree = tree.DecisionTreeClassifier(max_leaf_nodes=15, max_depth=30)
+dtree = dtree.fit(X_train, Y_train.ravel())
+dtree_pred = dtree.predict(X_test)
+print('The accuracy of the Decision Tree is', metrics.accuracy_score(dtree_pred, Y_test))
+## The accuracy of the Decision Tree is 0.7454545454545455
+\end{lstlisting}
 
-In the process of adjusting the parameters of the LR model, we find that decreasing regular terms significantly increases model accuracy. This means we are dealing with an under-fitting problem. So Random Forest perform better than LR. Then we use GridSearchCV to get better parameters. At last we find that when we do not limit the max-depth and max-leaf-nodes, set estimated quantity to 118 and criterion to gini, we can get the highest accuracy. 
+From the process of training Logistic Regression model, we can learn that the features are quite weak, thus not surprisingly the decision tree performs poorly.
+
+\begin{lstlisting}
+from sklearn.ensemble import RandomForestClassifier
+rfc = RandomForestClassifier(
+n_estimators = 100,
+criterion = 'gini',
+random_state = 0
+)
+rfc.fit(X_train, Y_train.ravel())
+rfc_pred = rfc.predict(X_test)
+print('The accuracy of the Random Forest is', metrics.accuracy_score(rfc_pred, Y_test))
+## The accuracy of the Random Forest is 0.7858585858585858
+\end{lstlisting}
+
+Due to \textbf{the requirement of interpretability}, we tried to use Random Forest to improve the performance of decision tree. Sample points are randomly selected from the sample pool each time to \textbf{reduce the negative impact of weak features}. RF performance is satisfactory. In this way, we can predict which microblogs may be rumors by calculating the importance of each feature, thereby reducing the cost of manual investigation.
+
+\begin{lstlisting}
+from sklearn.ensemble import AdaBoostClassifier
+abc = AdaBoostClassifier()
+abc.fit(X_train, Y_train.ravel())
+abc_pred = abc.predict(X_test)
+print('The accuracy of the AdaBoost is', metrics.accuracy_score(abc_pred, Y_test))
+## The accuracy of the AdaBoost is 0.7696969696969697
+\end{lstlisting}
+
+AdaBoost parallels weaker results and superimposes a stronger result to reduce bias. Due to weaker features, Ada also performs better than LR.
+
+In summary, there’re multiple features, but all these features are not strong enough. Decision tree are simple to understand and interpret multiple-factor influence, but decision tree performs with unsatisfactory result. 
+
+Random forest classifier will handle the missing values and maintain the accuracy of a large proportion of data.
+Random forest classifier corrects for decision trees' habit of overfitting to their training set.
+
+\subsection{Random Forest Model Training}
+Because the performance of Random Forest model is significantly better than other models, \textbf{we use Random Forest to train the classification model}. Then we adjust the parameters further, using GridSearchCV to get better parameters. After several rounds of GridSearchCV, accompanied by a reduction in range of hyperparameter space and a decrease in step length of GridSearch, we get the final model. In particular, we find that when we do not limit the max-depth and max-leaf-nodes, set estimated quantity to 118 and criterion to gini, we can get the highest accuracy. 
+
+\begin{lstlisting}
+from sklearn.ensemble import RandomForestClassifier
+rfc = RandomForestClassifier(
+n_estimators = 118,
+criterion = 'gini',
+random_state = 0
+)
+rfc.fit(X_train, Y_train.ravel())
+rfc_pred = rfc.predict(X_test)
+print('The accuracy of the Random Forest is', metrics.accuracy_score(rfc_pred, Y_test))
+## The accuracy of the Random Forest is 0.7888888888888889
+\end{lstlisting}
 
 Limited by the quality of the original dataset, the accuracy of the model is 0.789.
 
-Then we can calculate the importance of each feature to tell which feature we should care more.
+RF can effectively reduce training errors. Diversity in individual tree prediction functions comes from bootstrap samples and randomized features for node splitting. And RF combines the diversity of prediction functions, \textbf{which effectively reduces the bias caused by weak features}. That’s the reason why RF perform better in this problem. 
 
-We can find some interesting results from the importance of feature. As predicted previously, all features are weak. The most important feature is the number of followers. This is a counter-intuitive result that neither validation nor positive word rate matter. This may be because the dataset contains rumors of many low-level users who have few followers. Another interesting finding is that although both positive and negative words are weak features, the positive rate of a sentence is a relatively strong feature. This could offer us some insights when identifying rumors.
+Then we can calculate the importance of each feature with the model just trained to tell which feature we should care more.
+
+\begin{lstlisting}
+rfcf=RandomForestClassifier(
+n_estimators=118,
+criterion = 'gini',
+random_state = 0
+)
+rfcf.fit(X_train, Y_train.ravel())
+for j in zip(feature_names, rfcf.feature_importances_):
+print(j)
+## ('exclamation_mark', 0.06132879347402999)
+## ('question_mark', 0.023456691292703936)
+## ('friends', 0.1518103983298208)
+## ('followers', 0.3542632876955608)
+## ('positive_words', 0.08046175973506683)
+## ('negative_words', 0.07246633599533094)
+## ('positive_rate', 0.15069153233769772)
+## ('has_url', 0.026621527003040508)
+## ('description', 0.008268131758053498)
+## ('gender', 0.02351405594082627)
+## ('verified', 0.04711748643786886)
+## 其中依次对应：包含感叹号次数，包含问号次数，好友数，被关注量，正面词汇，负面词汇，正面率，是否包含链接，是否包含描述，性别，是否验证
+\end{lstlisting}
+\label{4.2}
+
+We can find some interesting results from the importance of feature. As predicted previously, all features are weak. \textbf{The most important feature is the number of followers}. This is a \textbf{counter-intuitive} result that neither validation nor positive word rate matter. This may be because the dataset contains rumors of many low-level users who have few followers. 
+
+Another interesting finding is that although both positive and negative words are weak features, \textbf{the positive rate of a sentence is a relatively strong feature}. This could offer us some insights when identifying rumors.
 
 \section{Evaluation and Analysis}
-All contexts contain two kinds of information: semantic information and syntactic information. Study of the former can lead to judgement for each single word and phrase, and study of the latter focus more on the organization of texts. Above all, the key problem is the way to extract features from the text. In our project, we have found some interesting points.
+All contexts contain two kinds of information: \textbf{semantic information and syntactic information}. Study of the former can lead to judgement for each single word and phrase, and study of the latter focus more on the organization of texts. Above all, the key problem is the way to extract features from the text. In our project, we have found some interesting points.
 \subsection{Feature Importances \& Confusion Matrix}
+The importance of each feature based on the Random Forest model has been shown in its entirety in subsection \ref{4.2}. Here we give a visualization graph to show the characteristic of feature importance distribution intuitively. 
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[height=0.25\linewidth]{pic/importances}
+\end{figure}
+
+Additionally, to evaluate the accuracy and efficacy of the classification model, we calculated the confusion matrix as follows. 
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[height=0.4\linewidth]{pic/Evaluation_new}
+\end{figure}
+
+From a practical view, social media platform can neither ignore the propagation of rumors (which may undermine social stability and harmony) nor massively delete posts with an ``unintentional model's accidental attack'' (which may cause customer attrition). Therefore we take the accuracy of both positive and negative classification into consideration, and we need to evaluate the efficacy of the model with the whole confusion matrix. 
 
 
 \subsection{Analysis of the Result}
+We've already discussed the result in some detail, so I don't intend to reiterate those conclusions here, only enumerating several essentials. 
 
+\hangafter=1 \setlength{\hangindent}{4em}
+$\blacksquare$ To some extent, the \'\fc{followers}\' is a prominent factor to the classifier. (It’s quite counterintuitive, perhaps the generation method of the dataset causes bias. The phenomenon may be caused by survivor bias, or by normal generation mechanism, with unverified account with zero followers more likely to spread rumors around.)
+
+\hangafter=1 \setlength{\hangindent}{4em}
+$\blacksquare$ The tone of rumors tends to be extreme, and the \'\fc{positive\_rate}\' feature has a certain weight in rumor determination. 
+
+\hangafter=1 \setlength{\hangindent}{4em}
+$\blacksquare$ None of these features plays a predominant role in decision making, so we need aggregation of features, which in turn proves the correctness of choosing Random Forest model. 
+\vspace{-15pt}
 \section{Further Improvemets}
+The accuracy of our model is about 79\%, partly due to the restriction of our small dataset, in that the generalization capacity may not support operating on enormous and complex dataset. We hope to improve the \textbf{efficacy of feature extraction by new model or proper hyperparameter} or \textbf{introduce early comments and reposts as new features} into the model. Also, we need a \textbf{larger and more representative dataset}.
+
+In fact, due to other research, \textbf{the distribution of Internet rumors in various fields is extremely uneven}. For example, disclosed in the third quarter of 2018, of the 676 Internet rumors, \textbf{politics accounts for the largest proportion}, about 28\%; news came in second with 22\%; entertainment and business accounted for 13\%, respectively; and 11\%, third and fourth; as many as 18 other subcategories are not to 10\%. \textbf{This imbalance makes rumor recognition possible in certain areas with high certainty, but the other area is not good, which also forms a challenge for rumor detection project.}
+
+\textbf{Domain information with different data distributions} is often treated as a whole, thus the classifier established in this way often over-sensitive. As a result, Internet rumors in some areas are not well identified. We need to build \textbf{separate classifiers for each domain to capture specific fields}, otherwise, high-frequency domain words will be misleading. 
+
+In the future work, on the one hand, we will deeply \textbf{investigate and analyze} the influence of the features mentioned above on the detection effect of rumor events, so as to select the best combination of features. On the other hand, we will consider \textbf{the principle of event propagation} and construct a \textbf{temporal feature representation model} that is more consistent with event evolution and propagation. At the same time, we will also consider using other model to solve the problems of complex \textbf{artificial feature construction and weak feature semantics}.
 
 
 
